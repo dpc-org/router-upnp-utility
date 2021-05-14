@@ -2,7 +2,7 @@
 # This script has been made for the DPC configuration
 # The router must have upnp unable (often enable by default)
 # It uses a config file (csv) to list the wanted devices and then is 
-# usable with python app.py [add|delete]
+# usable with python app.py [add|delete|list]
 #
 # If the router is not found (but has upnp enabled), this may be related to the linux firewall
 
@@ -23,7 +23,6 @@ class Mapping:
         self.int_host = int_host
 
     def add(self):
-        print(f"Adding {self} via upnp...")
         self.service.AddPortMapping(
             NewRemoteHost='',
             NewExternalPort=self.ext_port,
@@ -32,13 +31,12 @@ class Mapping:
             NewInternalClient=self.int_host,
             NewEnabled=1,
             NewPortMappingDescription=self.description,
-            NewLeaseDuration=0
+            NewLeaseDuration=0 # 0 means infinite
         )
-        print(f"{self} added !")
+        print(f" {self} added !")
 
 
     def delete(self):
-        print(f"Deleting {self}  via Upnp...")
         self.service.DeletePortMapping(
             NewRemoteHost='',
             NewExternalPort=self.ext_port,
@@ -53,10 +51,10 @@ class Mapping:
 # Every router has several services, which have several actions
 # Since every router are naming them differently, we then search for the service
 # having the UPnP AddPortMapping action
-def get_upnp_service(services):
+def get_upnp_service(services, requested_action: str):
     for service in services:
         for action in service.get_actions():
-            if 'AddPortMapping' in action.name:
+            if requested_action in action.name:
                 return service
     raise Exception('Unable to add a port mapping')
 
@@ -72,11 +70,19 @@ def get_translations(filename, service) -> list[Mapping]:
     return mappings
 
 
+actions = {
+    'add':'AddPortMapping',
+    'delete': 'DeletePortMapping',
+    'ls': 'GetListOfPortMappings',
+}
+
+
+
 if __name__ == '__main__':
 
     # App must be run with add or delete as args    
-    if len(sys.argv) != 2 or not sys.argv[1] in ['add','delete']:
-        print("Use [add|delete]")
+    if len(sys.argv) != 2 or not sys.argv[1] in actions.keys():
+        print("Use python router-utility.py [add|delete|ls]")
         exit()
 
     upnp = upnpy.UPnP()
@@ -84,18 +90,31 @@ if __name__ == '__main__':
     upnp.discover() # Needed in order to use get_igd
     device = upnp.get_igd()
     services = device.get_services()
-    # Get the needed service (which has addportmapping)
-    service = get_upnp_service(services)
+    # Get the needed service (which has the required action)
+    service = get_upnp_service(services, actions[sys.argv[1]])
+    
+
+    service = get_upnp_service(services, 'AddPortMapping')
     print(f"Upnp device discovered: {device}\n")
 
-
-    # Add every mapping in upnp (from the config file)
-    for m in get_translations('services.csv', service):
-        if sys.argv[1] == 'add':
-            print("Adding rules...")
-            m.add()
-        elif sys.argv[1] == 'delete':
-            print("Removing rules...")
-            m.delete()
-  
-    print("\nDone!")
+    if sys.argv[1] == 'ls':
+        print("> Listing rules:")
+        for i in range(65655):
+            try:
+                entry = service.GetGenericPortMappingEntry(NewPortMappingIndex=i)
+                print(Mapping(None,entry['NewPortMappingDescription'], entry['NewProtocol'], entry['NewExternalPort'], entry['NewInternalPort'], entry['NewInternalClient']))
+            except:
+                if i == 0:
+                    print('No rules have been found')
+                break
+    else:
+        for m in get_translations('services.csv', service):
+            # Add every mapping in upnp (from the config file)
+            if sys.argv[1] == 'add':
+                print("> Adding rules...")
+                m.add()
+            elif sys.argv[1] == 'delete':
+                print("> Removing rules...")
+                m.delete()
+      
+    print("\ndone!")

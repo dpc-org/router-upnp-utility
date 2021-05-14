@@ -1,2 +1,2 @@
 description,protocol,ext_port,int_port,int_host
-une desc,TCP,8022,8022,192.168.1.51
+une desc,TCP,8022,8022,192.168.1.49
