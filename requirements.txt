@@ -1,2 +1,4 @@
 UPnPy==1.1.8
 urllib3==1.26.4
+pyufw==0.0.3
+ufw==0.36

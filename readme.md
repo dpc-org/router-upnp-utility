@@ -5,9 +5,9 @@ It can also list every existing UPnP mapping
 
 ## Installation
 
+Venv is not usable because of the ufw dependency
 ```
-python -m venv venv
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
 ```
 ## Configuration
 
@@ -19,11 +19,11 @@ your description,TCP,8022,8022,192.168.1.51
 ```
 Just add the hosts you want to remove or add by adding a line with every information about it.
 ## Run
+(must be run as sudo because of ufw)
 ```
-python router-utility.py [add|delete|ls]
+sudo python router-utility.py [add|delete|ls]
 ```
 
 ## Troubleshooting
 
-1/ Host's firewall might block answer to upnp discovery (resulting in the "No IDG found" error)  
-2/ Due to upnp **secure** mode that can be enabled by default on routers, the host can only add rule with its ip.  
+1/ Due to upnp **secure** mode that can be enabled by default on routers, the host can only add rule with its ip.  

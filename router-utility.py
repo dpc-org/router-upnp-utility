@@ -5,11 +5,12 @@
 # usable with python app.py [add|delete|list]
 #
 # If the router is not found (but has upnp enabled), this may be related to the linux firewall
-
+# This version must be run as root with ufw installed
 
 import upnpy
 import csv
 import sys
+import pyufw as ufw
 
 # A mapping represent a port translation from a router to an host
 # The redirection is done: from router (ext_port) to int_host at int_port (int stands for internal)
@@ -85,36 +86,41 @@ if __name__ == '__main__':
         print("Use python router-utility.py [add|delete|ls]")
         exit()
 
-    upnp = upnpy.UPnP()
-    print("Discovering Upnp devices...")
-    upnp.discover() # Needed in order to use get_igd
-    device = upnp.get_igd()
-    services = device.get_services()
-    # Get the needed service (which has the required action)
-    service = get_upnp_service(services, actions[sys.argv[1]])
-    
+    ufw.disable()
+    try:
+        upnp = upnpy.UPnP()
+        print("Discovering Upnp devices...")
+        upnp.discover() # Needed in order to use get_igd
+        device = upnp.get_igd()
+        services = device.get_services()
+        # Get the needed service (which has the required action)
+        service = get_upnp_service(services, actions[sys.argv[1]])
+        
 
-    service = get_upnp_service(services, 'AddPortMapping')
-    print(f"Upnp device discovered: {device}\n")
+        service = get_upnp_service(services, 'AddPortMapping')
+        print(f"Upnp device discovered: {device}\n")
 
-    if sys.argv[1] == 'ls':
-        print("> Listing rules:")
-        for i in range(65655):
-            try:
-                entry = service.GetGenericPortMappingEntry(NewPortMappingIndex=i)
-                print(Mapping(None,entry['NewPortMappingDescription'], entry['NewProtocol'], entry['NewExternalPort'], entry['NewInternalPort'], entry['NewInternalClient']))
-            except:
-                if i == 0:
-                    print('No rules have been found')
-                break
-    else:
-        for m in get_translations('services.csv', service):
-            # Add every mapping in upnp (from the config file)
-            if sys.argv[1] == 'add':
-                print("> Adding rules...")
-                m.add()
-            elif sys.argv[1] == 'delete':
-                print("> Removing rules...")
-                m.delete()
-      
+        if sys.argv[1] == 'ls':
+            print("> Listing rules:")
+            for i in range(65655):
+                try:
+                    entry = service.GetGenericPortMappingEntry(NewPortMappingIndex=i)
+                    print(Mapping(None,entry['NewPortMappingDescription'], entry['NewProtocol'], entry['NewExternalPort'], entry['NewInternalPort'], entry['NewInternalClient']))
+                except:
+                    if i == 0:
+                        print('No rules have been found')
+                    break
+        else:
+            for m in get_translations('services.csv', service):
+                # Add every mapping in upnp (from the config file)
+                if sys.argv[1] == 'add':
+                    print("> Adding rules...")
+                    m.add()
+                elif sys.argv[1] == 'delete':
+                    print("> Removing rules...")
+                    m.delete()
+    except Exception as error:
+        print(f'ERROR: {error}')
+    finally:
+        ufw.enable()
     print("\ndone!")
