@@ -19,9 +19,18 @@ your description,TCP,8022,8022,192.168.1.51
 ```
 Just add the hosts you want to remove or add by adding a line with every information about it.
 ## Run
+With python
 ```
 python router-utility.py [add|delete|ls]
 ```
+With docker:
+```
+docker run --network=host -v $PWD/services.csv:/app/services.csv  pashmi/upnpclient [add|delete]
+```
+```
+docker run --network=host pashmi/upnpclient ls
+```
+
 
 ## Troubleshooting
 
